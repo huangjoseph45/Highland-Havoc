@@ -1,0 +1,165 @@
+
+
+@import url('https://fonts.googleapis.com/css2?family=Jersey+10&display=swap');
+
+
+
+@font-face {
+    font-family: 'lcd';
+    src: url("./LcdSolid-VPzB.ttf") format('ttf');
+    font-weight: normal;
+    font-style:normal;
+}
+
+:root {
+    --stroke-color: #fafaf9;
+    --title-thickness: 7px;
+}
+
+
+
+* {
+    margin: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+    user-select: none;
+    font-family: "Jersey 10", sans-serif;
+
+}
+
+.game-window {
+    background-image: url('assets/background-image.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    height: 100vh;
+    display: flex;
+}
+
+.start-screen {
+  transform: translateY(-100px);
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+}
+
+.title {
+text-shadow: calc(-1 * var(--title-thickness)) 0 var(--stroke-color),
+             0 calc(var(--title-thickness)) var(--stroke-color),
+             calc(var(--title-thickness)) 0 var(--stroke-color),
+             0 calc(-1 * var(--title-thickness)) var(--stroke-color);
+    color: #66a256;
+    letter-spacing: 5px;
+    font-size: 10rem;
+    font-family: "Jersey 10", sans-serif;
+    padding: 1rem;
+    animation: fallBounce 2s ease;
+}
+
+.start-button{
+  position: absolute;
+  transform: translateY(150px);
+
+    letter-spacing: 3px;
+    font-size: 2rem;
+    border: 2px solid #fafaf9;
+    color: #fafaf9;
+    padding: 0.5rem 1rem 0.5rem 1rem;
+    background-color: rgba(101, 163, 13, 0.3);
+    transition: 0.2s;
+    box-sizing: border-box;
+;
+}
+
+.start-button:hover {
+    border: 3px solid #fafaf9;
+    font-size: 2.5rem;
+    background-color: rgba(101, 163, 13, 1);
+}
+
+
+
+#player {
+    position: absolute;
+    z-index: 100;
+}
+
+.ground {
+    width: 219.389110226vw;
+    height: 100px;
+    left: 0px;
+    position: absolute;
+    background-image: url('assets/environment/tile_jungle_ground_brown.png');
+    background-size: auto 100%;
+    background-position: left;
+    background-repeat: repeat-x;
+    bottom: 0;
+    z-index: 101;
+    /* animation: slideBackground 3.015s linear infinite;  */
+    animation-fill-mode: forwards;
+}
+
+.paused{
+    animation-play-state: paused;
+}
+
+.obstacle-ground {
+    position: absolute;
+    width: 2rem;
+    height: 3rem;
+    z-index: 100;
+    background-color: green;
+}
+
+.score-window {
+    justify-content: center;
+    align-items: center;
+    margin-top: 7vh;
+}
+.score {
+    position: absolute;
+    font-family: "Jersey 10", sans-serif;
+    font-size: 3rem;
+}
+
+#pause-button {
+    font-family: "Jersey 10", sans-serif;
+    font-size: 3rem;
+    position: absolute;
+
+    display: none;
+}
+
+@keyframes fallBounce {
+    0% { 
+      transform: translateY(-100vh); /* Start above the window */
+      animation-timing-function: cubic-bezier(0.55, 0.085, 0.68, 0.53); /* Accelerating fall */
+    }
+    60% { 
+      transform: translateY(0); /* Hits the ground */
+      animation-timing-function: cubic-bezier(0.1, 0.6, 0.4, 1); /* Fast fall */
+    }
+    70% { 
+      transform: translateY(-60px); /* First large bounce */
+      animation-timing-function: ease-out; /* Slower going up */
+    }
+    80% { 
+      transform: translateY(0); /* Back to ground */
+    }
+    85% { 
+      transform: translateY(-30px); /* Second smaller bounce */
+    }
+    90% { 
+      transform: translateY(0); /* Back to ground */
+    }
+    95% { 
+      transform: translateY(-5px); /* Final tiny bounce */
+    }
+    100% { 
+      transform: translateY(0); /* Settles */
+    }
+  }
+  
