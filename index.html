@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Highland Havoc is a fast endless runner: jump boulders, pillars, and ice in the Highlands. Arrow Up or Space to jump, click or P to pause."
+    />
+    <link rel="icon" type="image/png" href="assets/boulder-1.png" />
     <title>Highland Havoc</title>
     <link rel="stylesheet" href="index.css" />
   </head>
@@ -11,10 +16,18 @@
       <div class="score-window">
         <h1 class="score" style="display: none">0</h1>
       </div>
-      <span id="pause-button">Paused</span>
+      <span id="pause-button">Paused — click to resume</span>
       <div class="start-screen">
         <h1 class="title">Highland Havoc</h1>
         <button class="start-button">START</button>
+        <p class="best-score start-screen__best">Best: 0</p>
+        <p class="controls-hint">&uarr; or Space to jump &middot; click or P to pause</p>
+      </div>
+      <div class="game-over" style="display: none">
+        <h1 class="game-over__title">Game Over</h1>
+        <p class="final-score">Score: 0</p>
+        <p class="best-score game-over__best">Best: 0</p>
+        <button class="start-button play-again-button">PLAY AGAIN</button>
       </div>
       <div class="ground"></div>
       <script src="index.js"></script>

@@ -6,7 +6,7 @@
 
 @font-face {
     font-family: 'lcd';
-    src: url("./LcdSolid-VPzB.ttf") format('ttf');
+    src: url("./font/LcdSolid-VPzB.ttf") format('truetype');
     font-weight: normal;
     font-style:normal;
 }
@@ -60,9 +60,6 @@ text-shadow: calc(-1 * var(--title-thickness)) 0 var(--stroke-color),
 }
 
 .start-button{
-  position: absolute;
-  transform: translateY(150px);
-
     letter-spacing: 3px;
     font-size: 2rem;
     border: 2px solid #fafaf9;
@@ -71,7 +68,7 @@ text-shadow: calc(-1 * var(--title-thickness)) 0 var(--stroke-color),
     background-color: rgba(101, 163, 13, 0.3);
     transition: 0.2s;
     box-sizing: border-box;
-;
+    cursor: pointer;
 }
 
 .start-button:hover {
@@ -121,7 +118,7 @@ text-shadow: calc(-1 * var(--title-thickness)) 0 var(--stroke-color),
 }
 .score {
     position: absolute;
-    font-family: "Jersey 10", sans-serif;
+    font-family: 'lcd', "Jersey 10", sans-serif;
     font-size: 3rem;
 }
 
@@ -129,8 +126,63 @@ text-shadow: calc(-1 * var(--title-thickness)) 0 var(--stroke-color),
     font-family: "Jersey 10", sans-serif;
     font-size: 3rem;
     position: absolute;
+    color: var(--stroke-color);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    z-index: 200;
 
     display: none;
+}
+
+.best-score {
+    font-size: 2rem;
+    color: var(--stroke-color);
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.controls-hint {
+    font-size: 1.5rem;
+    color: var(--stroke-color);
+    letter-spacing: 1px;
+    margin-top: 0.5rem;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.start-screen__best {
+    margin-top: 1rem;
+}
+
+.game-over {
+    position: absolute;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.45);
+}
+
+.game-over__title {
+    text-shadow: calc(-1 * var(--title-thickness)) 0 var(--stroke-color),
+             0 calc(var(--title-thickness)) var(--stroke-color),
+             calc(var(--title-thickness)) 0 var(--stroke-color),
+             0 calc(-1 * var(--title-thickness)) var(--stroke-color);
+    color: #66a256;
+    letter-spacing: 5px;
+    font-size: 6rem;
+    padding: 1rem;
+}
+
+.final-score {
+    font-size: 3rem;
+    color: var(--stroke-color);
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.game-over .start-button {
+    margin-top: 2rem;
 }
 
 @keyframes fallBounce {

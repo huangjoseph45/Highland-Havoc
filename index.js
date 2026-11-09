@@ -1,6 +1,5 @@
 const config = {
   windowWidth: document.body.offsetWidth,
-  scoreBreakPoint: 50,
   deltaScore: 10,
   floorHeight: 95,
   obstacleSpawnTimer: 1, //seconds
@@ -21,38 +20,87 @@ const config = {
   },
 };
 
-window.addEventListener("load", () => {
-  const title = document.querySelector(".title");
-  const startButton = document.querySelector(".start-button");
+const BEST_SCORE_KEY = "highland-havoc-best";
 
-  const startElements = [title, startButton];
+function getBestScore() {
+  return Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
+}
+
+function saveBestScore(score) {
+  window.localStorage.setItem(BEST_SCORE_KEY, String(score));
+}
+
+window.addEventListener("load", () => {
+  const startButton = document.querySelector(".start-button");
+  const playAgainButton = document.querySelector(".play-again-button");
+  const gameOverScreen = document.querySelector(".game-over");
+
+  // The teardown for the current run: removes its window listeners and
+  // cancels its animation frame. Reassigned by each runGame() call.
+  let destroyGame = null;
+
+  const showBest = (selector) => {
+    document.querySelectorAll(selector).forEach((element) => {
+      element.innerText = `Best: ${getBestScore()}`;
+    });
+  };
+  showBest(".start-screen__best");
 
   startButton.addEventListener("click", () => {
+    startButton.blur();
     runGame();
-    startElements.forEach((element) => {
-      element.style.display = "none";
-    });
+    document.querySelector(".start-screen").style.display = "none";
+  });
+
+  playAgainButton.addEventListener("click", () => {
+    playAgainButton.blur();
+    // Clear the previous run's sprites and player from the DOM; the new
+    // runGame() builds fresh ones (and fresh static sprite lists).
+    if (destroyGame) destroyGame();
+    document
+      .querySelectorAll("#player, .obstacle-ground")
+      .forEach((element) => element.remove());
+    gameOverScreen.style.display = "none";
+    runGame();
   });
 
   function runGame() {
     let score = 0;
     let requestId;
     let gameOverCondition = false;
+    let pauseState = false;
+    // The spawn interval is mutated as the score grows; a fresh run
+    // starts from the opening pace again.
+    config.obstacleSpawnTimer = 1;
 
     class InputHandler {
       keys = [];
       constructor() {
-        window.addEventListener("keydown", (e) => {
-          if (e.key === "ArrowUp" && this.keys.indexOf(e.key) === -1) {
-            this.keys.push(e.key);
+        this.onKeyDown = (e) => {
+          // Space would re-activate the focused START / PLAY AGAIN button.
+          if (e.code === "Space") e.preventDefault();
+          if (this.isJumpKey(e) && this.keys.indexOf("Jump") === -1) {
+            this.keys.push("Jump");
           }
-        });
+        };
 
-        window.addEventListener("keyup", (e) => {
-          if (this.keys.indexOf(e.key) !== -1) {
-            this.keys.splice(this.keys.indexOf(e.key), 1);
+        this.onKeyUp = (e) => {
+          if (this.isJumpKey(e) && this.keys.indexOf("Jump") !== -1) {
+            this.keys.splice(this.keys.indexOf("Jump"), 1);
           }
-        });
+        };
+
+        window.addEventListener("keydown", this.onKeyDown);
+        window.addEventListener("keyup", this.onKeyUp);
+      }
+
+      isJumpKey(e) {
+        return e.key === "ArrowUp" || e.code === "Space" || e.code === "KeyW";
+      }
+
+      destroy() {
+        window.removeEventListener("keydown", this.onKeyDown);
+        window.removeEventListener("keyup", this.onKeyUp);
       }
 
       getKeys() {
@@ -148,19 +196,18 @@ window.addEventListener("load", () => {
           const elementToRemove = document.getElementById(this.id);
           if (elementToRemove) {
             elementToRemove.remove();
-            if (this.type === "sprite") {
-              Sprite.spriteList.splice(elementToRemove, 1);
-            } else if (this.type === "cloud") {
-              if (this.type === "sprite") {
-                Sprite.cloudList.splice(elementToRemove, 1);
-              }
-            }
+          }
+          // Remove this sprite from its list by identity. Splicing by
+          // the DOM element (or by a guessed index) removed the wrong
+          // entry and leaked the off-screen one.
+          if (this.type === "sprite") {
+            const index = Sprite.spriteList.indexOf(this);
+            if (index !== -1) Sprite.spriteList.splice(index, 1);
+          } else if (this.type === "cloud") {
+            const index = Sprite.cloudList.indexOf(this);
+            if (index !== -1) Sprite.cloudList.splice(index, 1);
           }
         }
-      }
-
-      swirlingAnimation() {
-        this.swirling = true;
       }
 
       iceProjectile() {
@@ -232,8 +279,11 @@ window.addEventListener("load", () => {
       jumpHeight = config.Player.jumpHeight;
       gravity = config.Player.gravity;
 
-      constructor(spriteWidth, spriteHeight) {
-        super(spriteWidth, spriteHeight);
+      constructor() {
+        super(config.Player.playerWidth, config.Player.playerHeight);
+        // Sprite's constructor creates an obstacle element for this
+        // instance; the player renders its own element instead, so drop it.
+        this.spriteObject.remove();
         this.positionX = config.Player.positionX;
         this.positionY = config.floorHeight;
         this.spriteHeight = config.Player.playerHeight;
@@ -276,7 +326,7 @@ window.addEventListener("load", () => {
         }
 
         if (
-          input.getKeys().indexOf("ArrowUp") !== -1 && //jumping
+          input.getKeys().indexOf("Jump") !== -1 && //jumping
           this.positionY === config.floorHeight &&
           !pauseState
         ) {
@@ -284,15 +334,12 @@ window.addEventListener("load", () => {
         }
         this.positionY += this.velocityY;
         this.velocityY -= this.gravity;
-        console.log(this.velocityY);
 
         this.playerObject.style.left = `${this.positionX}px`;
         this.playerObject.style.bottom = `${this.positionY}px`;
       }
 
       playerDeath() {
-        this.startTime = this.currTime;
-
         this.playerObject.style.backgroundSize = "cover";
         this.playerObject.style.backgroundPosition = "center";
         this.playerObject.style.border = "none";
@@ -300,30 +347,22 @@ window.addEventListener("load", () => {
 
         const player = this.playerObject;
 
+        // Play the three blood frames, one every 70ms, then stop.
         let animStep = 0;
-        let deathId;
-        let time;
+        let lastFrameTime = performance.now();
 
         function step(timestamp) {
-          if (timestamp > 70 + time) {
-            time = timestamp;
+          if (timestamp - lastFrameTime > 70) {
+            lastFrameTime = timestamp;
             player.style.backgroundImage = `url('assets/blood/B10${animStep}.png')`;
             animStep += 1;
           }
 
           if (animStep <= 2) {
-            deathId = requestAnimationFrame(step);
-          } else {
-            cancelAnimationFrame(deathId);
+            requestAnimationFrame(step);
           }
         }
-        for (let i = 0; i < 3; i++) {
-          setTimeout(() => {
-            this.playerObject.style.backgroundImage = `url('assets/blood/B10${i}.png')`;
-          }, 7000);
-        }
         requestAnimationFrame(step);
-        time = performance.now();
       }
     }
 
@@ -343,8 +382,7 @@ window.addEventListener("load", () => {
       ground.style.left = `${groundPosition}px`;
     }
 
-    const playerObject = document.querySelector("#player"); // initiialize Player element
-    const player = new Player(20, 20, playerObject); // initiialize Player class
+    const player = new Player();
     const input = new InputHandler(); // initiialize Player inputs
 
     function updateScore() {
@@ -355,8 +393,6 @@ window.addEventListener("load", () => {
       scoreboard.innerText = score;
     }
 
-    let pauseState = false;
-
     function checkCollision(spriteList, player) {
       spriteList.forEach((sprite) => {
         if (
@@ -366,7 +402,6 @@ window.addEventListener("load", () => {
           player.positionY + player.spriteHeight > sprite.positionY
         ) {
           // Collision detected between player and sprite
-          console.log("Collision detected!");
           gameOver();
 
           pauseState = true;
@@ -383,7 +418,7 @@ window.addEventListener("load", () => {
 
     function spawnCloud(cloudX, cloudY) {
       const newCloud = new Sprite(200, 100, cloudY);
-      newCloud.cloud(cloudX);
+      newCloud.cloud(cloudX, cloudY);
       Sprite.cloudList.push(newCloud);
     }
 
@@ -420,31 +455,82 @@ window.addEventListener("load", () => {
     }
 
     function gameOver() {
+      if (gameOverCondition) return;
       if (requestId) {
         cancelAnimationFrame(requestId);
         requestId = null;
       }
       gameOverCondition = true;
       player.playerDeath();
+
+      const isNewBest = score > getBestScore();
+      if (isNewBest) saveBestScore(score);
+      document.querySelector(".final-score").innerText =
+        `Score: ${score}${isNewBest ? " — new best!" : ""}`;
+      showBest(".game-over__best");
+      gameOverScreen.style.display = "flex";
+      if (destroyGame) destroyGame();
     }
 
     function animate() {
       const scoreboard = document.querySelector(".score");
-      console.log(scoreboard);
       scoreboard.style.top = `${document.body.offsetHeight / 5}px`;
 
       scoreboard.style.removeProperty("display");
       scoreboard.style.display = "flex";
-      scoreboard.style;
 
       spawnCloud(
         config.windowWidth,
         Math.random() * 350 + config.floorHeight + 300
       );
-      window.addEventListener("visibilitychange", () => {
-        //pause on lost focus
-        pauseState = !pauseState;
-      });
+
+      // Pause controls, registered once per run (not once per frame):
+      // click anywhere, P / Escape, or hiding the tab. Tab-hide only
+      // pauses; it never resumes on its own. Button clicks are ignored
+      // so PLAY AGAIN doesn't instantly re-pause the new run.
+      function setPaused(value) {
+        if (gameOverCondition) return;
+        if (value === pauseState) return;
+        pauseState = value;
+        pausing(pauseState);
+        if (pauseState) {
+          if (requestId) {
+            cancelAnimationFrame(requestId);
+            requestId = null;
+          }
+        } else {
+          requestId = requestAnimationFrame(gameLoop);
+        }
+      }
+
+      function onPauseClick(e) {
+        if (e.target.closest("button")) return;
+        setPaused(!pauseState);
+      }
+
+      function onPauseKey(e) {
+        if (e.key === "p" || e.key === "P" || e.key === "Escape") {
+          setPaused(!pauseState);
+        }
+      }
+
+      function onVisibilityChange() {
+        if (document.hidden) setPaused(true);
+      }
+
+      window.addEventListener("click", onPauseClick);
+      window.addEventListener("keydown", onPauseKey);
+      document.addEventListener("visibilitychange", onVisibilityChange);
+      destroyGame = () => {
+        window.removeEventListener("click", onPauseClick);
+        window.removeEventListener("keydown", onPauseKey);
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+        input.destroy();
+        if (requestId) {
+          cancelAnimationFrame(requestId);
+          requestId = null;
+        }
+      };
 
       let lastTime = 0;
       let secondTimer = 0;
@@ -452,10 +538,11 @@ window.addEventListener("load", () => {
       let totalTime = 0;
 
       function gameLoop(timestamp) {
-        checkCollision(Sprite.spriteList, player);
         if (pauseState) {
-          cancelAnimationFrame(requestId);
-        } //pause
+          requestId = null;
+          return;
+        }
+        checkCollision(Sprite.spriteList, player);
         updateScore();
 
         if (!lastTime) {
@@ -468,19 +555,6 @@ window.addEventListener("load", () => {
         cloudTimer += deltaTime;
         totalTime += deltaTime;
         let newSprite;
-
-        if (secondTimer > 1) {
-          window.addEventListener("click", () => {
-            //pause on click
-            if (pauseState === false) {
-              pauseState = true;
-            } else if (pauseState && !gameOverCondition) {
-              pauseState = false;
-              requestId = requestAnimationFrame(gameLoop);
-            }
-            pausing(pauseState);
-          });
-        }
 
         if (cloudTimer > Math.random() * 50 + 10) {
           spawnCloud(
@@ -521,7 +595,6 @@ window.addEventListener("load", () => {
                 config.Sprite.spriteHeight * 0.36,
                 config.floorHeight
               );
-              newSprite.swirlingAnimation();
               newSprite.rockAttack();
             } else if (which > 60 && which < 75) {
               newSprite = new Sprite(
